@@ -1,0 +1,18 @@
+# Generated environment files (contain secrets)
+server-a.env
+server-b.env
+client.env
+
+# Backup of generated keys
+*.env.backup
+
+# Docker volumes
+data/
+daily-files/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.DS_Store

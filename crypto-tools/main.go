@@ -137,7 +137,20 @@ func storeOnServer(serverURL string, req StoreRequest) error {
         return err
     }
 
-    resp, err := http.Post(serverURL+"/store", "application/json", bytes.NewBuffer(jsonData))
+    httpReq, err := http.NewRequest("POST", serverURL+"/store", bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+    httpReq.Header.Set("Content-Type", "application/json")
+
+    // Add API key for authentication
+    apiKey := getAPIKeyForServer(serverURL)
+    if apiKey != "" {
+        httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+    }
+
+    client := &http.Client{Timeout: 10 * time.Second}
+    resp, err := client.Do(httpReq)
     if err != nil {
         return err
     }
@@ -204,11 +217,27 @@ func retrieveFromServer(server, filename string) {
         log.Fatal("Server URL not configured")
     }
 
-    resp, err := http.Get(fmt.Sprintf("%s/retrieve?filename=%s", serverURL, filename))
+    httpReq, err := http.NewRequest("GET", fmt.Sprintf("%s/retrieve?filename=%s", serverURL, filename), nil)
+    if err != nil {
+        log.Fatal("Failed to create request:", err)
+    }
+
+    // Add API key for authentication
+    apiKey := getAPIKeyForServer(serverURL)
+    if apiKey != "" {
+        httpReq.Header.Set("Authorization", "Bearer "+apiKey)
+    }
+
+    client := &http.Client{Timeout: 10 * time.Second}
+    resp, err := client.Do(httpReq)
     if err != nil {
         log.Fatal("Failed to retrieve from server:", err)
     }
     defer resp.Body.Close()
+
+    if resp.StatusCode == http.StatusUnauthorized {
+        log.Fatal("Authentication failed: Invalid or missing API key")
+    }
 
     var result RetrieveResponse
     if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
@@ -220,6 +249,29 @@ func retrieveFromServer(server, filename string) {
     }
 
     fmt.Print(result.Content)
+}
+
+// getAPIKeyForServer returns the appropriate API key for the given server URL
+func getAPIKeyForServer(serverURL string) string {
+    // Determine which server this is
+    serverAURL := os.Getenv("STORAGE_SERVER_A_URL")
+    if serverAURL == "" {
+        serverAURL = os.Getenv("SERVER_A_URL")
+    }
+
+    serverBURL := os.Getenv("STORAGE_SERVER_B_URL")
+    if serverBURL == "" {
+        serverBURL = os.Getenv("SERVER_B_URL")
+    }
+
+    // Return the appropriate API key
+    if serverURL == serverAURL {
+        return os.Getenv("STORAGE_SERVER_A_API_KEY")
+    } else if serverURL == serverBURL {
+        return os.Getenv("STORAGE_SERVER_B_API_KEY")
+    }
+
+    return ""
 }
 
 func healthCheck() {

@@ -1,12 +1,16 @@
 package main
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type StoreRequest struct {
@@ -26,15 +30,26 @@ type HealthResponse struct {
 
 const dataDir = "/data"
 
+var (
+	apiKeyHash string
+	serverID   string
+)
+
 func main() {
 	// Ensure data directory exists
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		log.Fatal("Failed to create data directory:", err)
 	}
 
-	serverID := os.Getenv("SERVER_ID")
+	serverID = os.Getenv("SERVER_ID")
 	if serverID == "" {
 		serverID = "unknown"
+	}
+
+	// Load API key hash (SHA256 of the actual API key)
+	apiKeyHash = os.Getenv("API_KEY_HASH")
+	if apiKeyHash == "" {
+		log.Fatal("API_KEY_HASH environment variable is required")
 	}
 
 	port := os.Getenv("SERVER_PORT")
@@ -50,14 +65,56 @@ func main() {
 		})
 	})
 
-	http.HandleFunc("/store", handleStore)
-	http.HandleFunc("/retrieve", handleRetrieve)
+	http.HandleFunc("/store", authenticateRequest(handleStore))
+	http.HandleFunc("/retrieve", authenticateRequest(handleRetrieve))
 
 	log.Printf("Storage Server %s starting on port %s...", serverID, port)
 	log.Printf("Data directory: %s", dataDir)
+	log.Printf("Authentication: ENABLED (API key hash: %s...)", apiKeyHash[:16])
 
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal("Server failed:", err)
+	}
+}
+
+// authenticateRequest is a middleware that verifies the API key
+func authenticateRequest(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Extract API key from Authorization header
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			log.Printf("UNAUTHORIZED: Missing Authorization header from %s", r.RemoteAddr)
+			http.Error(w, "Unauthorized: Missing API key", http.StatusUnauthorized)
+			return
+		}
+
+		// Expected format: "Bearer <api-key>"
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			log.Printf("UNAUTHORIZED: Invalid Authorization format from %s", r.RemoteAddr)
+			http.Error(w, "Unauthorized: Invalid API key format", http.StatusUnauthorized)
+			return
+		}
+
+		providedKey := parts[1]
+
+		// Hash the provided key
+		hasher := sha256.New()
+		hasher.Write([]byte(providedKey))
+		providedHash := hex.EncodeToString(hasher.Sum(nil))
+
+		// Constant-time comparison to prevent timing attacks
+		if subtle.ConstantTimeCompare([]byte(providedHash), []byte(apiKeyHash)) != 1 {
+			log.Printf("UNAUTHORIZED: Invalid API key from %s (hash: %s...)", r.RemoteAddr, providedHash[:16])
+			http.Error(w, "Unauthorized: Invalid API key", http.StatusUnauthorized)
+			return
+		}
+
+		// Log successful authentication
+		log.Printf("AUTHENTICATED: Request from %s to %s", r.RemoteAddr, r.URL.Path)
+
+		// Call the actual handler
+		next(w, r)
 	}
 }
 
