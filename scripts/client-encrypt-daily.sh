@@ -44,10 +44,10 @@ SHARE_A=$(echo "$SHARES" | grep "share_A:" | cut -d: -f2)
 SHARE_B=$(echo "$SHARES" | grep "share_B:" | cut -d: -f2)
 
 echo "📤 Storing share A on Storage Server A..."
-sss-crypto-tool store-on-servers "share_A_${DATE}.bin" "$SHARE_A" >/dev/null
+sss-crypto-tool store-on-server A "share_A_${DATE}.bin" "$SHARE_A"
 
 echo "📤 Storing share B on Storage Server B..."
-sss-crypto-tool store-on-servers "share_B_${DATE}.bin" "$SHARE_B" >/dev/null
+sss-crypto-tool store-on-server B "share_B_${DATE}.bin" "$SHARE_B"
 
 # Delete processed file
 echo "🗑️  Deleting processed file..."
@@ -57,8 +57,8 @@ echo "✅ Daily encryption process complete for $DATE"
 echo ""
 echo "Files created on storage servers:"
 echo "  - Storage Server A & B: bundle_${DATE}.json"
-echo "  - Storage Server A & B: share_A_${DATE}.bin"
-echo "  - Storage Server A & B: share_B_${DATE}.bin"
+echo "  - Storage Server A only: share_A_${DATE}.bin"
+echo "  - Storage Server B only: share_B_${DATE}.bin"
 echo ""
 echo "🗑️  Original file deleted after processing"
 

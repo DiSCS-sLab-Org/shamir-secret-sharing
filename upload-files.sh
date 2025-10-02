@@ -30,7 +30,7 @@ echo "📦 Uploading files to Storage Server A..."
 ssh "${USER}@${STORAGE_SERVER_A_IP}" 'mkdir -p /tmp/sss-storage'
 scp Dockerfile.server "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
 scp docker-compose-server-a.yml "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
-scp -r crypto-tools "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/server"
+scp -r storage-server "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
 echo "✅ Storage Server A files uploaded"
 
 echo ""
@@ -38,7 +38,7 @@ echo "📦 Uploading files to Storage Server B..."
 ssh "${USER}@${STORAGE_SERVER_B_IP}" 'mkdir -p /tmp/sss-storage'
 scp Dockerfile.server "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
 scp docker-compose-server-b.yml "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
-scp -r crypto-tools "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/server"
+scp -r storage-server "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
 echo "✅ Storage Server B files uploaded"
 
 echo ""

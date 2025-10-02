@@ -263,48 +263,12 @@ sudo systemctl daemon-reload
 
 
 
+  # 1. Create a test file
+  docker exec sss-client sh -c 'echo '\''["192.168.1.100", "10.0.0.5", "172.16.0.20"]'\'' > /daily-files/attackers_2025-09-30.json'
 
-1. Client script (client-encrypt-daily.sh:54): rm "$DAILY_FILE" - Original plaintext file is deleted after encryption
-  2. Memory cleanup (line 66): unset DEK SHARES SHARE_A SHARE_B BUNDLE - Sensitive data cleared from memory
-  3. Decrypt script (client-decrypt-view.sh:40): Comment explicitly states "Security: NO plaintext files saved to disk"
-  4. Go code (main.go): Never writes plaintext to disk - only processes it in memory
-
-  ---
-  📍 Ciphertext Storage Locations
-
-  Storage Servers A & B (139.91.90.9 & 139.91.90.156):
-  - Location: /tmp/sss-storage/data/ (mounted as /data inside containers)
-  - Files stored per date:
-    - bundle_YYYY-MM-DD.json - Encrypted data bundle
-    - share_A_YYYY-MM-DD.bin - Share A (stored on both servers)
-    - share_B_YYYY-MM-DD.bin - Share B (stored on both servers)
-
-  To view files on a storage server:
-  ssh liakakos@139.91.90.9 'ls -lah /tmp/sss-storage/data/'
-
-  ---
-  🧪 How to Test on Client
-
-  1. Create a test file on the client server:
-  ssh liakakos@139.91.90.11
-  mkdir -p /tmp/sss-client/daily-files
-  echo '["192.168.1.100", "10.0.0.5", "172.16.0.20"]' > /tmp/sss-client/daily-files/attackers_2025-09-30.json
-
-  2. Run encryption process:
+  # 2. Run the encryption process
   docker exec sss-client /scripts/client-encrypt-daily.sh 2025-09-30
 
-  3. Verify file was deleted (plaintext removed):
-  docker exec sss-client ls /daily-files/
-  (Should be empty)
-
-  4. Check ciphertext on storage servers:
-  # On storage server A:
-  ssh liakakos@139.91.90.9 'ls -lah /tmp/sss-storage/data/'
-
-  # On storage server B:
-  ssh liakakos@139.91.90.156 'ls -lah /tmp/sss-storage/data/'
-
-  5. Decrypt and view (without saving plaintext):
+  # 3. Decrypt and view (without saving plaintext)
   docker exec sss-client /scripts/client-decrypt-view.sh 2025-09-30
 
-  This will display the decrypted IPs only to stdout - no plaintext file is created!

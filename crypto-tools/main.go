@@ -80,6 +80,11 @@ func main() {
             log.Fatal("Usage: store-on-servers <filename> <content>")
         }
         storeOnServers(os.Args[2], os.Args[3])
+    case "store-on-server":
+        if len(os.Args) != 5 {
+            log.Fatal("Usage: store-on-server <server> <filename> <content>")
+        }
+        storeOnSpecificServer(os.Args[2], os.Args[3], os.Args[4])
     case "retrieve-from-server":
         if len(os.Args) != 4 {
             log.Fatal("Usage: retrieve-from-server <server> <filename>")
@@ -144,6 +149,38 @@ func storeOnServer(serverURL string, req StoreRequest) error {
     }
 
     return nil
+}
+
+func storeOnSpecificServer(server, filename, content string) {
+    var serverURL string
+    switch server {
+    case "A", "serverA":
+        serverURL = os.Getenv("STORAGE_SERVER_A_URL")
+        if serverURL == "" {
+            serverURL = os.Getenv("SERVER_A_URL") // Fallback
+        }
+    case "B", "serverB":
+        serverURL = os.Getenv("STORAGE_SERVER_B_URL")
+        if serverURL == "" {
+            serverURL = os.Getenv("SERVER_B_URL") // Fallback
+        }
+    default:
+        log.Fatal("Server must be 'A' or 'B'")
+    }
+
+    if serverURL == "" {
+        log.Fatal("Server URL not configured")
+    }
+
+    req := StoreRequest{
+        Filename: filename,
+        Content:  content,
+    }
+
+    if err := storeOnServer(serverURL, req); err != nil {
+        log.Fatalf("Failed to store on Server %s: %v", server, err)
+    }
+    fmt.Printf("✅ Stored %s on Server %s\n", filename, server)
 }
 
 func retrieveFromServer(server, filename string) {
