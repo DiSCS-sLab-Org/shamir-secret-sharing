@@ -17,7 +17,7 @@ COPY scripts/ /scripts/
 RUN chmod +x /scripts/*.sh
 
 # Create directories for data processing
-RUN mkdir -p /daily-files /processed
+RUN mkdir -p /data /processed
 
 WORKDIR /app
 

@@ -3,11 +3,33 @@ set -e
 
 # SSS System - Complete Deployment Script with Authentication
 # This script generates API keys and deploys all necessary files to the servers
+# Usage: ./deploy-with-auth.sh [tmp|opt]
 
 STORAGE_SERVER_A_IP="139.91.90.9"
 STORAGE_SERVER_B_IP="139.91.90.156"
 CLIENT_SERVER_IP="139.91.90.11"
 USER="liakakos"
+
+# Parse deployment location parameter
+DEPLOY_MODE="${1:-tmp}"
+if [[ "$DEPLOY_MODE" != "tmp" && "$DEPLOY_MODE" != "prod" ]]; then
+    echo "❌ Error: Invalid parameter. Use 'tmp' or 'prod'"
+    echo "Usage: $0 [tmp|prod]"
+    exit 1
+fi
+
+# Set base directories based on deployment mode
+if [[ "$DEPLOY_MODE" == "prod" ]]; then
+    STORAGE_BASE_DIR="~/sss-storage"
+    CLIENT_BASE_DIR="~/sss-client"
+    USE_SUDO=""
+    echo "📍 Deployment mode: PRODUCTION (~/ home directory)"
+else
+    STORAGE_BASE_DIR="/tmp/sss-storage"
+    CLIENT_BASE_DIR="/tmp/sss-client"
+    USE_SUDO=""
+    echo "📍 Deployment mode: TESTING (/tmp)"
+fi
 
 echo "==============================================="
 echo "   🚀 SSS Complete Deployment Script"
@@ -20,9 +42,9 @@ echo "  3. Create environment files"
 echo "  4. Deploy containers with authentication"
 echo ""
 echo "Target Servers:"
-echo "  📦 Storage Server A: $STORAGE_SERVER_A_IP"
-echo "  📦 Storage Server B: $STORAGE_SERVER_B_IP"
-echo "  💻 Client Server:    $CLIENT_SERVER_IP"
+echo "  📦 Storage Server A: $STORAGE_SERVER_A_IP → $STORAGE_BASE_DIR"
+echo "  📦 Storage Server B: $STORAGE_SERVER_B_IP → $STORAGE_BASE_DIR"
+echo "  💻 Client Server:    $CLIENT_SERVER_IP → $CLIENT_BASE_DIR"
 echo ""
 
 # Confirm deployment
@@ -86,21 +108,21 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "📦 Creating remote directory..."
-ssh "${USER}@${STORAGE_SERVER_A_IP}" 'mkdir -p /tmp/sss-storage'
+ssh "${USER}@${STORAGE_SERVER_A_IP}" "mkdir -p $STORAGE_BASE_DIR"
 
 echo "📤 Uploading storage server code..."
-scp storage-server/main.go "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage-upload-main.go"
-scp storage-server/go.mod "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage-upload-go.mod"
-ssh "${USER}@${STORAGE_SERVER_A_IP}" 'mkdir -p /tmp/sss-storage/storage-server && mv /tmp/sss-storage-upload-main.go /tmp/sss-storage/storage-server/main.go && mv /tmp/sss-storage-upload-go.mod /tmp/sss-storage/storage-server/go.mod'
+scp storage-server/main.go "${USER}@${STORAGE_SERVER_A_IP}:${STORAGE_BASE_DIR}-upload-main.go"
+scp storage-server/go.mod "${USER}@${STORAGE_SERVER_A_IP}:${STORAGE_BASE_DIR}-upload-go.mod"
+ssh "${USER}@${STORAGE_SERVER_A_IP}" "mkdir -p $STORAGE_BASE_DIR/storage-server && mv ${STORAGE_BASE_DIR}-upload-main.go $STORAGE_BASE_DIR/storage-server/main.go && mv ${STORAGE_BASE_DIR}-upload-go.mod $STORAGE_BASE_DIR/storage-server/go.mod"
 
 echo "📤 Uploading Dockerfile..."
-scp docker/Dockerfile.server "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
+scp docker/Dockerfile.server "${USER}@${STORAGE_SERVER_A_IP}:${STORAGE_BASE_DIR}/"
 
 echo "📤 Uploading docker-compose configuration..."
-scp docker/docker-compose-server-a.yml "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
+scp docker/docker-compose-server-a.yml "${USER}@${STORAGE_SERVER_A_IP}:${STORAGE_BASE_DIR}/"
 
 echo "📤 Uploading environment file..."
-scp server-a.env "${USER}@${STORAGE_SERVER_A_IP}:/tmp/sss-storage/"
+scp server-a.env "${USER}@${STORAGE_SERVER_A_IP}:${STORAGE_BASE_DIR}/"
 
 echo "✅ Storage Server A files uploaded"
 echo ""
@@ -111,21 +133,21 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "📦 Creating remote directory..."
-ssh "${USER}@${STORAGE_SERVER_B_IP}" 'mkdir -p /tmp/sss-storage'
+ssh "${USER}@${STORAGE_SERVER_B_IP}" "mkdir -p $STORAGE_BASE_DIR"
 
 echo "📤 Uploading storage server code..."
-scp storage-server/main.go "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage-upload-main.go"
-scp storage-server/go.mod "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage-upload-go.mod"
-ssh "${USER}@${STORAGE_SERVER_B_IP}" 'mkdir -p /tmp/sss-storage/storage-server && mv /tmp/sss-storage-upload-main.go /tmp/sss-storage/storage-server/main.go && mv /tmp/sss-storage-upload-go.mod /tmp/sss-storage/storage-server/go.mod'
+scp storage-server/main.go "${USER}@${STORAGE_SERVER_B_IP}:${STORAGE_BASE_DIR}-upload-main.go"
+scp storage-server/go.mod "${USER}@${STORAGE_SERVER_B_IP}:${STORAGE_BASE_DIR}-upload-go.mod"
+ssh "${USER}@${STORAGE_SERVER_B_IP}" "mkdir -p $STORAGE_BASE_DIR/storage-server && mv ${STORAGE_BASE_DIR}-upload-main.go $STORAGE_BASE_DIR/storage-server/main.go && mv ${STORAGE_BASE_DIR}-upload-go.mod $STORAGE_BASE_DIR/storage-server/go.mod"
 
 echo "📤 Uploading Dockerfile..."
-scp docker/Dockerfile.server "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
+scp docker/Dockerfile.server "${USER}@${STORAGE_SERVER_B_IP}:${STORAGE_BASE_DIR}/"
 
 echo "📤 Uploading docker-compose configuration..."
-scp docker/docker-compose-server-b.yml "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
+scp docker/docker-compose-server-b.yml "${USER}@${STORAGE_SERVER_B_IP}:${STORAGE_BASE_DIR}/"
 
 echo "📤 Uploading environment file..."
-scp server-b.env "${USER}@${STORAGE_SERVER_B_IP}:/tmp/sss-storage/"
+scp server-b.env "${USER}@${STORAGE_SERVER_B_IP}:${STORAGE_BASE_DIR}/"
 
 echo "✅ Storage Server B files uploaded"
 echo ""
@@ -136,25 +158,25 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "📦 Creating remote directories..."
-ssh "${USER}@${CLIENT_SERVER_IP}" 'mkdir -p /tmp/sss-client/crypto-tools /tmp/sss-client/scripts'
+ssh "${USER}@${CLIENT_SERVER_IP}" "mkdir -p $CLIENT_BASE_DIR/crypto-tools $CLIENT_BASE_DIR/scripts"
 
 echo "📤 Uploading crypto-tools code..."
-scp crypto-tools/main.go "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/crypto-tools/"
-scp crypto-tools/go.mod "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/crypto-tools/"
-scp crypto-tools/go.sum "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/crypto-tools/"
+scp crypto-tools/main.go "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/crypto-tools/"
+scp crypto-tools/go.mod "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/crypto-tools/"
+scp crypto-tools/go.sum "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/crypto-tools/"
 
 echo "📤 Uploading scripts..."
-scp scripts/*.sh "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/scripts/"
+scp scripts/*.sh "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/scripts/"
 
 echo "📤 Uploading Dockerfile..."
-scp docker/Dockerfile.client "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/"
+scp docker/Dockerfile.client "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/"
 
 echo "📤 Uploading docker-compose configuration..."
-scp docker/docker-compose-client.yml "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/"
+scp docker/docker-compose-client.yml "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/"
 
 echo "📤 Uploading environment file..."
-scp client.env "${USER}@${CLIENT_SERVER_IP}:/tmp/sss-client/"
-ssh "${USER}@${CLIENT_SERVER_IP}" 'chmod 600 /tmp/sss-client/client.env'
+scp client.env "${USER}@${CLIENT_SERVER_IP}:${CLIENT_BASE_DIR}/"
+ssh "${USER}@${CLIENT_SERVER_IP}" "chmod 600 ${CLIENT_BASE_DIR}/client.env"
 
 echo "✅ Client Server files uploaded"
 echo ""
@@ -165,10 +187,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "🏗️  Stopping old containers..."
-ssh "${USER}@${STORAGE_SERVER_A_IP}" 'cd /tmp/sss-storage && docker-compose -f docker-compose-server-a.yml down 2>/dev/null || true'
+ssh "${USER}@${STORAGE_SERVER_A_IP}" "cd $STORAGE_BASE_DIR && docker-compose -f docker-compose-server-a.yml down 2>/dev/null || true"
 
 echo "🏗️  Building and starting with authentication..."
-ssh "${USER}@${STORAGE_SERVER_A_IP}" 'cd /tmp/sss-storage && docker-compose -f docker-compose-server-a.yml --env-file server-a.env up -d --build'
+ssh "${USER}@${STORAGE_SERVER_A_IP}" "cd $STORAGE_BASE_DIR && docker-compose -f docker-compose-server-a.yml --env-file server-a.env up -d --build"
 
 echo "⏳ Waiting for server to start..."
 sleep 5
@@ -188,10 +210,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "🏗️  Stopping old containers..."
-ssh "${USER}@${STORAGE_SERVER_B_IP}" 'cd /tmp/sss-storage && docker-compose -f docker-compose-server-b.yml down 2>/dev/null || true'
+ssh "${USER}@${STORAGE_SERVER_B_IP}" "cd $STORAGE_BASE_DIR && docker-compose -f docker-compose-server-b.yml down 2>/dev/null || true"
 
 echo "🏗️  Building and starting with authentication..."
-ssh "${USER}@${STORAGE_SERVER_B_IP}" 'cd /tmp/sss-storage && docker-compose -f docker-compose-server-b.yml --env-file server-b.env up -d --build'
+ssh "${USER}@${STORAGE_SERVER_B_IP}" "cd $STORAGE_BASE_DIR && docker-compose -f docker-compose-server-b.yml --env-file server-b.env up -d --build"
 
 echo "⏳ Waiting for server to start..."
 sleep 5
@@ -211,10 +233,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 
 echo "🏗️  Stopping old containers..."
-ssh "${USER}@${CLIENT_SERVER_IP}" 'cd /tmp/sss-client && docker-compose -f docker-compose-client.yml down 2>/dev/null || true'
+ssh "${USER}@${CLIENT_SERVER_IP}" "cd $CLIENT_BASE_DIR && docker-compose -f docker-compose-client.yml down 2>/dev/null || true"
 
 echo "🏗️  Building and starting with API keys..."
-ssh "${USER}@${CLIENT_SERVER_IP}" 'cd /tmp/sss-client && docker-compose -f docker-compose-client.yml --env-file client.env up -d --build'
+ssh "${USER}@${CLIENT_SERVER_IP}" "cd $CLIENT_BASE_DIR && docker-compose -f docker-compose-client.yml --env-file client.env up -d --build"
 
 echo "⏳ Waiting for client to start..."
 sleep 5

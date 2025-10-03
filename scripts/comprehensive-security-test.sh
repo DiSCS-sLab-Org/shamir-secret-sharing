@@ -2,7 +2,7 @@
 set -e
 
 DATE=${1:-$(date +%Y-%m-%d)}
-TEST_FILE="/daily-files/attackers_${DATE}.json"
+TEST_FILE="/data/attackers_${DATE}.json"
 ORIGINAL_HASH=""
 
 echo "=== Comprehensive Security Test for $DATE ==="
@@ -63,13 +63,13 @@ else
     echo "✅ Original file successfully deleted"
 fi
 
-# Check no artifacts in daily-files directory
-REMAINING_FILES=$(find /daily-files -name "*${DATE}*" 2>/dev/null | wc -l)
+# Check no artifacts in data directory
+REMAINING_FILES=$(find /data -name "*${DATE}*" 2>/dev/null | wc -l)
 if [ "$REMAINING_FILES" -eq 0 ]; then
-    echo "✅ No artifacts remaining in /daily-files"
+    echo "✅ No artifacts remaining in /data"
 else
-    echo "❌ SECURITY FAILURE: Artifacts found in /daily-files:"
-    find /daily-files -name "*${DATE}*"
+    echo "❌ SECURITY FAILURE: Artifacts found in /data:"
+    find /data -name "*${DATE}*"
     exit 1
 fi
 echo ""

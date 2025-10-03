@@ -2,18 +2,18 @@
 set -e
 
 DATE=${1:-$(date +%Y-%m-%d)}
-DAILY_FILE="/daily-files/attackers_${DATE}.json"
+DATA_FILE="/data/attackers_${DATE}.json"
 
 echo "=== Client Server: Daily Encryption Process for $DATE ==="
 
-# Check if daily file exists
-if [ ! -f "$DAILY_FILE" ]; then
-    echo "❌ Daily file not found: $DAILY_FILE"
-    echo "Please place the attacker IP file in /daily-files/"
+# Check if data file exists
+if [ ! -f "$DATA_FILE" ]; then
+    echo "❌ Data file not found: $DATA_FILE"
+    echo "Please place the attacker IP file in /data/"
     exit 1
 fi
 
-echo "📄 Processing file: $DAILY_FILE"
+echo "📄 Processing file: $DATA_FILE"
 
 # Step 0: Health check storage servers
 echo "🔍 Checking storage server connectivity..."
@@ -29,7 +29,7 @@ echo "DEK generated: ${DEK:0:16}... (truncated for display)"
 
 # Step 2: Encrypt the data
 echo "🔒 Encrypting attacker IP data..."
-BUNDLE=$(sss-crypto-tool encrypt "$DAILY_FILE" "$DEK" "$DATE")
+BUNDLE=$(sss-crypto-tool encrypt "$DATA_FILE" "$DEK" "$DATE")
 
 # Step 3: Store encrypted bundle on both storage servers
 echo "📤 Storing encrypted bundle on both storage servers..."
@@ -51,7 +51,7 @@ sss-crypto-tool store-on-server B "share_B_${DATE}.bin" "$SHARE_B"
 
 # Delete processed file
 echo "🗑️  Deleting processed file..."
-rm "$DAILY_FILE"
+rm "$DATA_FILE"
 
 echo "✅ Daily encryption process complete for $DATE"
 echo ""

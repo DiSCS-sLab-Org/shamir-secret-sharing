@@ -31,22 +31,24 @@ BUNDLE=$(sss-crypto-tool retrieve-from-server A "bundle_${DATE}.json")
 echo "🔓 Decrypting bundle..."
 DECRYPTED=$(sss-crypto-tool decrypt "$BUNDLE" "$RECONSTRUCTED_DEK")
 
-# Step 4: Display results
-echo ""
-echo "🎯 Attacker IP addresses for $DATE:"
-echo "==============================================="
-echo "$DECRYPTED" | jq '.'
-
-# Security: NO plaintext files saved to disk
+# Step 4: Save decrypted file to /data
+OUTPUT_FILE="/data/attackers_${DATE}.json"
+echo "💾 Saving decrypted data to $OUTPUT_FILE..."
+echo "$DECRYPTED" > "$OUTPUT_FILE"
 
 # Step 5: Show statistics
+echo ""
+echo "📊 File Statistics:"
 if command -v jq >/dev/null 2>&1; then
-    IP_COUNT=$(echo "$DECRYPTED" | jq '. | length' 2>/dev/null || echo "unknown")
-    echo "📊 Total attacker IPs: $IP_COUNT"
+    IP_COUNT=$(jq '. | length' "$OUTPUT_FILE" 2>/dev/null || echo "unknown")
+    echo "  Total attacker IPs: $IP_COUNT"
 fi
+FILE_SIZE=$(wc -c < "$OUTPUT_FILE")
+echo "  File size: $FILE_SIZE bytes"
+echo "  Location: $OUTPUT_FILE"
 
 echo ""
-echo "🎉 Decryption and viewing successful!"
+echo "🎉 Decryption successful! File saved to $OUTPUT_FILE"
 
 # Clear sensitive data from memory
 unset SHARE_A SHARE_B RECONSTRUCTED_DEK DECRYPTED BUNDLE
