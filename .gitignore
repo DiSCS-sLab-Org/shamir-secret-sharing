@@ -3,6 +3,11 @@ server-a.env
 server-b.env
 client.env
 
+# Redundant script (deploy-with-auth.sh already generates keys internally)
+generate-api-keys.sh
+
+Documentation
+
 # Backup of generated keys
 *.env.backup
 

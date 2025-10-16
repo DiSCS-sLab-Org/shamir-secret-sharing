@@ -1,0 +1,42 @@
+Shamir's Secret Sharing Docker Lab
+Copyright (c) 2025 FORTH Foundation for Research and Technology - Hellas
+
+This project is licensed under the MIT License. See LICENSE file for details.
+
+================================================================================
+
+THIRD-PARTY SOFTWARE NOTICES AND INFORMATION
+
+This project incorporates components from the following open source projects:
+
+================================================================================
+
+1. Shamir's Secret Sharing Implementation
+   Source: github.com/hashicorp/vault/shamir
+   License: Mozilla Public License 2.0 (MPL-2.0)
+   Copyright: HashiCorp, Inc.
+
+   Available at: https://github.com/hashicorp/vault
+
+   This component is used for implementing Shamir's Secret Sharing algorithm
+   to split and reconstruct cryptographic keys.
+
+================================================================================
+
+2. XChaCha20-Poly1305 Cryptography
+   Source: golang.org/x/crypto/chacha20poly1305
+   License: BSD 3-Clause License
+   Copyright: The Go Authors
+
+   Available at: https://go.googlesource.com/crypto
+
+   This component provides authenticated encryption using the XChaCha20-Poly1305
+   AEAD construction.
+
+================================================================================
+
+For full license texts of third-party components, please refer to:
+- MPL-2.0: https://www.mozilla.org/en-US/MPL/2.0/
+- BSD-3-Clause: https://opensource.org/licenses/BSD-3-Clause
+
+All third-party software is used in accordance with their respective licenses.
