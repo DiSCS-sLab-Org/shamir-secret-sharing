@@ -2,7 +2,7 @@
 set -e
 
 DATE=${1:-$(date +%Y-%m-%d)}
-DATA_FILE="/data/attackers_${DATE}.json"
+DATA_FILE="/data/attackers_${DATE}.txt"
 
 echo "=== Client Server: Daily Encryption Process for $DATE ==="
 

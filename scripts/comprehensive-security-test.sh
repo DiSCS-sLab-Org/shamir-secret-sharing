@@ -2,7 +2,7 @@
 set -e
 
 DATE=${1:-$(date +%Y-%m-%d)}
-TEST_FILE="/data/attackers_${DATE}.json"
+TEST_FILE="/data/attackers_${DATE}.txt"
 ORIGINAL_HASH=""
 
 echo "=== Comprehensive Security Test for $DATE ==="
@@ -11,26 +11,8 @@ echo ""
 # Step 1: Create test file and record hash
 echo "📄 Step 1: Creating test file with known content..."
 cat > "$TEST_FILE" << 'EOF'
-[
-  {
-    "ip": "203.0.113.100",
-    "attacks": 42,
-    "severity": "critical",
-    "first_seen": "2025-09-27T10:00:00Z",
-    "last_seen": "2025-09-27T18:30:00Z",
-    "country": "TEST",
-    "attack_types": ["test_attack"]
-  },
-  {
-    "ip": "198.51.100.50",
-    "attacks": 15,
-    "severity": "medium",
-    "first_seen": "2025-09-27T12:15:00Z",
-    "last_seen": "2025-09-27T16:45:00Z",
-    "country": "TEST2",
-    "attack_types": ["scan", "probe"]
-  }
-]
+203.0.113.100
+198.51.100.50
 EOF
 
 echo "✅ Test file created: $TEST_FILE"
