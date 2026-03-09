@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# fetch_all_cowrie_attackers.py - Fetch ALL Cowrie attacker IPs (no limit)
+# fetch_all_cowrie_attackers.py - Fetch top Cowrie attacker IPs
 
 from elasticsearch import Elasticsearch
 import argparse
@@ -22,12 +22,12 @@ QUERY_CONFIG = {
     "type": "Cowrie",
     "exclude_regex": "139\\.91\\..*",  # Exclude internal IPs
     "honeypot_subnet_regex": "139\\.91\\.130\\..*",  # Only attacks on honeypot subnet
-    "batch_size": 10000  # Batch size for composite aggregation pagination
+    "limit": 100  # Top N attacker IPs to return
 }
 
 
-def get_all_attacking_ips(time_back="24h", honeypot_regex=None, protocol=None):
-    """Get ALL attacking IP addresses using composite aggregation (no limit)"""
+def get_top_attacking_ips(time_back="24h", honeypot_regex=None, protocol=None):
+    """Get the top attacking IP addresses by attack count"""
 
     client = Elasticsearch(
         ES_CONFIG["host"],
@@ -43,86 +43,60 @@ def get_all_attacking_ips(time_back="24h", honeypot_regex=None, protocol=None):
         scope_parts.append(f"protocol={protocol}")
 
     if scope_parts:
-        print(f"Querying ALL attacking IPs for last {time_back} with {' and '.join(scope_parts)}...")
+        print(
+            f"Querying top {QUERY_CONFIG['limit']} attacking IPs for last {time_back} "
+            f"with {' and '.join(scope_parts)}..."
+        )
     else:
-        print(f"Querying ALL attacking IPs for last {time_back}...")
+        print(f"Querying top {QUERY_CONFIG['limit']} attacking IPs for last {time_back}...")
 
-    ip_attack_dict = {}
-    after_key = None
-    batch_count = 0
+    agg_config = {
+        "terms": {
+            "field": "src_ip",
+            "size": QUERY_CONFIG["limit"],
+            "order": {"_count": "desc"},
+        },
+        "aggs": {
+            "attack_count": {"value_count": {"field": "src_ip"}}
+        }
+    }
 
-    while True:
-        # Build composite aggregation query
-        agg_config = {
-            "composite": {
-                "size": QUERY_CONFIG["batch_size"],
-                "sources": [
-                    {"ip": {"terms": {"field": "src_ip"}}}
-                ]
-            },
-            "aggs": {
-                "attack_count": {"value_count": {"field": "src_ip"}}
+    must_filters = [
+        {"match": {"type": QUERY_CONFIG["type"]}},
+    ]
+    if protocol:
+        must_filters.append({"match": {"protocol": protocol}})
+    if honeypot_regex:
+        must_filters.append({"regexp": {"dest_ip": honeypot_regex}})
+
+    query = {
+        "size": 0,
+        "query": {
+            "bool": {
+                "must": must_filters,
+                "filter": [
+                    {"range": {"@timestamp": {"gte": f"now-{time_back}", "lt": "now"}}},
+                ],
+                "must_not": [
+                    {"regexp": {"src_ip": QUERY_CONFIG["exclude_regex"]}},
+                ],
             }
-        }
+        },
+        "aggs": {
+            "attacking_ips": agg_config
+        },
+    }
 
-        # Add pagination key if not first request
-        if after_key:
-            agg_config["composite"]["after"] = after_key
+    try:
+        response = client.search(index=QUERY_CONFIG["index"], body=query)
+        buckets = response['aggregations']['attacking_ips']['buckets']
+    except Exception as e:
+        print(f"Error querying Elasticsearch: {e}")
+        return []
 
-        must_filters = [
-            {"match": {"type": QUERY_CONFIG["type"]}},
-        ]
-        if protocol:
-            must_filters.append({"match": {"protocol": protocol}})
-        if honeypot_regex:
-            must_filters.append({"regexp": {"dest_ip": honeypot_regex}})
+    ip_attack_list = [(bucket['key'], bucket['doc_count']) for bucket in buckets]
 
-        query = {
-            "size": 0,
-            "query": {
-                "bool": {
-                    "must": must_filters,
-                    "filter": [
-                        {"range": {"@timestamp": {"gte": f"now-{time_back}", "lt": "now"}}},
-                    ],
-                    "must_not": [
-                        {"regexp": {"src_ip": QUERY_CONFIG["exclude_regex"]}},
-                    ],
-                }
-            },
-            "aggs": {
-                "attacking_ips": agg_config
-            },
-        }
-
-        try:
-            response = client.search(index=QUERY_CONFIG["index"], body=query)
-            buckets = response['aggregations']['attacking_ips']['buckets']
-
-            if not buckets:
-                break
-
-            batch_count += 1
-            for bucket in buckets:
-                ip_address = bucket['key']['ip']
-                attack_count = bucket['doc_count']
-                ip_attack_dict[ip_address] = attack_count
-
-            print(f"  Batch {batch_count}: fetched {len(buckets)} IPs (total: {len(ip_attack_dict)})")
-
-            # Get the after_key for next page
-            after_key = response['aggregations']['attacking_ips'].get('after_key')
-            if not after_key:
-                break
-
-        except Exception as e:
-            print(f"Error querying Elasticsearch: {e}")
-            break
-
-    # Convert to sorted list (by attack count, descending)
-    ip_attack_list = sorted(ip_attack_dict.items(), key=lambda x: x[1], reverse=True)
-
-    print(f"Retrieved {len(ip_attack_list)} unique attacking IP addresses")
+    print(f"Retrieved {len(ip_attack_list)} attacking IP addresses")
     return ip_attack_list
 
 
@@ -161,17 +135,17 @@ def test_connection():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fetch ALL Cowrie attacker IPs from Elasticsearch (no limit)",
+        description="Fetch the top Cowrie attacker IPs from Elasticsearch",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Get ALL attacking IPs from last 24 hours (all protocols, saves to data/)
+  # Get the top attacking IPs from last 24 hours (all protocols, saves to data/)
   python3 fetch_all_cowrie_attackers.py --time 24h
 
   # Get only SSH attacking IPs
   python3 fetch_all_cowrie_attackers.py --time 24h --protocol ssh
 
-  # Get ALL attacking IPs from last week with custom output dir
+  # Get the top attacking IPs from last week with custom output dir
   python3 fetch_all_cowrie_attackers.py --time 7d --output-dir output --output attackers_7d.txt
 
   # Test connection
@@ -214,8 +188,8 @@ Examples:
 
     args = parser.parse_args()
 
-    print("Cowrie ALL Attackers Fetcher")
-    print("=" * 35)
+    print("Cowrie Top Attackers Fetcher")
+    print("=" * 28)
 
     if args.test:
         test_connection()
@@ -225,8 +199,7 @@ Examples:
     if protocol_filter in ("", "all", "*", "any"):
         protocol_filter = None
 
-    # Fetch ALL data using composite aggregation
-    data = get_all_attacking_ips(args.time, args.honeypot_subnet, protocol_filter)
+    data = get_top_attacking_ips(args.time, args.honeypot_subnet, protocol_filter)
 
     if not data:
         print("No data retrieved. Check your API key and connection.")
@@ -259,22 +232,6 @@ Examples:
 
     # Save data
     save_ips_only(data, output_path)
-
-    # Save metadata file with time range info
-    meta_path = output_path.replace('.txt', '_meta.json')
-    import json
-    metadata = {
-        "start_utc": start_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "end_utc": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "time_range": args.time,
-        "protocol_filter": protocol_filter or "all",
-        "ip_count": len(data),
-        "output_file": args.output,
-        "fetched_at_utc": end_utc.strftime("%Y-%m-%dT%H:%M:%SZ"),
-    }
-    with open(meta_path, 'w') as f:
-        json.dump(metadata, f, indent=2)
-    print(f"Metadata saved to: {meta_path}")
 
     # Show statistics
     total_attacks = sum(count for _, count in data)
