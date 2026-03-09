@@ -5,9 +5,9 @@ set -e
 # This script generates API keys and deploys all necessary files to the servers
 # Usage: ./deploy-with-auth.sh [tmp|opt]
 
-STORAGE_SERVER_A_IP="139.91.90.9"
+STORAGE_SERVER_A_IP="139.91.90.230"
 STORAGE_SERVER_B_IP="139.91.90.156"
-CLIENT_SERVER_IP="139.91.90.11"
+CLIENT_SERVER_IP="139.91.90.231"
 USER="liakakos"
 
 # Parse deployment location parameter
@@ -262,7 +262,7 @@ else
     echo "⚠️  Server A authentication may not be working"
 fi
 
-if curl -s -o /dev/null -w "%{http_code}" "http://${STORAGE_SERVER_B_IP}:8080/retrieve?filename=test.bin" | grep -q "401"; then
+if curl -s -o /dev/null -w "%{http_code}" "http://${STORAGE_SERVER_B_IP}:8081/retrieve?filename=test.bin" | grep -q "401"; then
     echo "✅ Server B correctly rejects unauthenticated requests"
 else
     echo "⚠️  Server B authentication may not be working"

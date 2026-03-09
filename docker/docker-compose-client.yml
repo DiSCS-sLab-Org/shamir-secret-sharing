@@ -11,8 +11,8 @@ services:
       - ./data:/data
       - ./scripts:/scripts
     environment:
-      - STORAGE_SERVER_A_URL=http://139.91.90.9:8080
-      - STORAGE_SERVER_B_URL=http://139.91.90.156:8080
+      - STORAGE_SERVER_A_URL=http://139.91.90.230:8080
+      - STORAGE_SERVER_B_URL=http://139.91.90.156:8081
       - STORAGE_SERVER_A_API_KEY=${SERVER_A_API_KEY}
       - STORAGE_SERVER_B_API_KEY=${SERVER_B_API_KEY}
       - DATA_DIR=/data
